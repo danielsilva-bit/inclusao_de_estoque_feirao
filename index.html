@@ -1,0 +1,456 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Painel Feirão — Estoque</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#14151A; --paper:#EEF1F5; --card:#FFFFFF; --line:#DFE3E9; --muted:#6B7280;
+    --brand:#0B0C10; --gold:#A9822C; --gold-bg:#FBF3DF;
+    --green:#2E8B57; --green-bg:#E7F4EC;
+    --gray:#8A8F98; --gray-bg:#EDEEF0;
+    --steel:#33517A; --steel-bg:#E7EDF6;
+    --red:#B23A48; --red-bg:#FBEAEC;
+    --amber:#B8860B; --amber-bg:#FDF3DD;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html,body{background:var(--paper);}
+  body{font-family:'Inter',system-ui,sans-serif;color:var(--ink);padding:20px;-webkit-font-smoothing:antialiased;}
+  .wrap{max-width:1440px;margin:0 auto;}
+
+  .topbar{
+    background:var(--brand);color:#fff;border-radius:14px;padding:22px 26px;
+    display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:16px;margin-bottom:18px;
+  }
+  .topbar .eyebrow{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:#B8A25B;margin-bottom:6px;}
+  .topbar h1{font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:1.7rem;letter-spacing:-.01em;}
+  .topbar p{color:#9CA3AF;font-size:.85rem;margin-top:4px;}
+  .session-box{display:flex;flex-direction:column;align-items:flex-end;gap:8px;}
+  .session-info{font-family:'IBM Plex Mono',monospace;font-size:11px;color:#B0B5BE;text-align:right;}
+  .session-info b{color:#fff;}
+
+  .kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:16px;}
+  .kpi{background:var(--card);border-radius:12px;padding:16px 18px;border-top:3px solid var(--line);box-shadow:0 1px 2px rgba(20,21,26,.04);}
+  .kpi .num{font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:1.9rem;line-height:1;letter-spacing:-.01em;font-variant-numeric:tabular-nums;}
+  .kpi .lbl{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-top:7px;}
+  .kpi .sub{font-size:.74rem;color:var(--muted);margin-top:2px;line-height:1.4;}
+  .kpi.c-total{border-top-color:var(--steel);}
+  .kpi.c-sem{border-top-color:var(--gray);} .kpi.c-sem .num{color:var(--gray);}
+  .kpi.c-bom{border-top-color:var(--green);} .kpi.c-bom .num{color:var(--green);}
+  .kpi.c-critico{border-top-color:var(--red);} .kpi.c-critico .num{color:var(--red);}
+  .kpi.c-estoque{border-top-color:var(--steel);}
+  .kpi.c-cobertura{border-top-color:var(--gold);} .kpi.c-cobertura .num{color:var(--gold);}
+
+  .panel{background:var(--card);border-radius:12px;padding:18px 20px;margin-bottom:16px;box-shadow:0 1px 2px rgba(20,21,26,.04);}
+  .panel h3{font-family:'Space Grotesk',sans-serif;font-size:.98rem;font-weight:600;margin-bottom:12px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+  .panel h3 .tag{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.08em;text-transform:uppercase;background:var(--steel-bg);color:var(--steel);padding:3px 8px;border-radius:5px;}
+
+  .filter-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;}
+  .filter-group{display:flex;flex-direction:column;gap:5px;}
+  .filter-group label{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);}
+  .filter-group input,.filter-group select{padding:9px 10px;border:1px solid var(--line);border-radius:7px;font-size:.86rem;font-family:'Inter',sans-serif;background:#fff;}
+  .filter-group input:focus,.filter-group select:focus{outline:none;border-color:var(--brand);box-shadow:0 0 0 3px rgba(11,12,16,.08);}
+  .actions{display:flex;gap:10px;margin-top:14px;flex-wrap:wrap;}
+  .btn{font-family:'Inter',sans-serif;font-weight:600;font-size:.83rem;border:none;border-radius:8px;padding:9px 16px;cursor:pointer;white-space:nowrap;}
+  .btn-dark{background:var(--brand);color:#fff;}
+  .btn-outline{background:#fff;color:var(--brand);border:1px solid var(--line);}
+  .btn:hover{opacity:.88;}
+
+  .charts-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(360px,1fr));gap:14px;margin-bottom:16px;}
+  .chart-box{background:var(--card);border-radius:12px;padding:18px 20px;box-shadow:0 1px 2px rgba(20,21,26,.04);}
+  .chart-box h4{font-family:'Space Grotesk',sans-serif;font-size:.92rem;font-weight:600;margin-bottom:14px;}
+  .bar-row{display:grid;grid-template-columns:140px 1fr 46px;align-items:center;gap:10px;margin-bottom:10px;}
+  .bar-row .rlbl{font-size:.78rem;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .bar-track{background:var(--gray-bg);border-radius:4px;height:10px;overflow:hidden;}
+  .bar-fill{height:100%;border-radius:4px;min-width:3px;}
+  .bar-row .rval{font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:.8rem;text-align:right;font-variant-numeric:tabular-nums;}
+
+  .legend{display:flex;gap:14px;flex-wrap:wrap;margin-top:10px;font-size:.72rem;color:var(--muted);}
+  .legend span{display:inline-flex;align-items:center;gap:5px;}
+  .legend i{width:9px;height:9px;border-radius:50%;display:inline-block;}
+
+  .table-wrapper{border-radius:10px;border:1px solid var(--line);max-height:520px;overflow-y:auto;overflow-x:auto;}
+  table{width:100%;border-collapse:collapse;background:#fff;font-size:.8rem;min-width:920px;}
+  thead th{position:sticky;top:0;background:var(--brand);color:#fff;z-index:2;}
+  th{padding:10px 8px;text-align:left;font-weight:600;font-size:.7rem;letter-spacing:.02em;text-transform:uppercase;cursor:pointer;user-select:none;}
+  td{padding:9px 8px;border-bottom:1px solid var(--line);white-space:normal;word-break:break-word;}
+  tbody tr:hover{background:#F7F8FA;}
+  .badge{display:inline-block;padding:3px 7px;border-radius:5px;font-size:.68rem;font-weight:600;white-space:nowrap;}
+  .b-green{background:var(--green-bg);color:var(--green);}
+  .b-gold{background:var(--gold-bg);color:var(--gold);}
+  .b-amber{background:var(--amber-bg);color:var(--amber);}
+  .b-red{background:var(--red-bg);color:var(--red);}
+  .b-gray{background:var(--gray-bg);color:var(--gray);}
+  .b-steel{background:var(--steel-bg);color:var(--steel);}
+
+  .pager{display:flex;align-items:center;justify-content:center;gap:14px;margin-top:14px;}
+  .pager button{padding:7px 14px;border-radius:7px;border:1px solid var(--line);background:#fff;cursor:pointer;font-size:.82rem;font-weight:600;color:var(--brand);}
+  .pager button:disabled{opacity:.4;cursor:not-allowed;}
+  .pager .pageinfo{font-family:'IBM Plex Mono',monospace;font-size:.78rem;color:var(--muted);}
+
+  .footer-note{margin-top:18px;padding:14px 18px;font-size:.76rem;color:var(--muted);text-align:center;}
+  .footer-note b{color:var(--ink);}
+
+  .empty-state{background:var(--card);border:1.5px dashed var(--line);border-radius:14px;padding:40px 24px;text-align:center;color:var(--muted);}
+
+  @media (max-width:640px){
+    body{padding:12px;}
+    .topbar{padding:16px;flex-direction:column;align-items:stretch;}
+    .topbar h1{font-size:1.3rem;}
+    .kpi-grid{grid-template-columns:repeat(2,1fr);gap:8px;}
+    .kpi{padding:12px 12px;} .kpi .num{font-size:1.4rem;}
+    .charts-grid{grid-template-columns:1fr;}
+    .filter-grid{grid-template-columns:1fr 1fr;}
+    .actions{flex-direction:column;} .actions .btn{width:100%;}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="topbar">
+    <div>
+      <div class="eyebrow">Usadosbr · Super Feirão Setembro 26</div>
+      <h1>Painel de Estoque — Feirão</h1>
+      <p>Evolução diária do estoque nas lojas participantes</p>
+    </div>
+    <div class="session-box">
+      <div class="session-info">Atualizado em<br><b id="lastUpdate">—</b></div>
+    </div>
+  </div>
+
+  <div class="kpi-grid" id="kpiGrid"></div>
+
+  <div class="panel">
+    <h3>Filtros <span class="tag" id="filterCount">0 ativos</span></h3>
+    <div class="filter-grid">
+      <div class="filter-group">
+        <label>Buscar (loja ou CNPJ)</label>
+        <input type="text" id="fSearch" placeholder="Nome da loja ou CNPJ">
+      </div>
+      <div class="filter-group">
+        <label>Status pagamento</label>
+        <select id="fStatus"><option value="">— Todos —</option></select>
+      </div>
+      <div class="filter-group">
+        <label>Faixa de atualização</label>
+        <select id="fFaixa"><option value="">— Todas —</option></select>
+      </div>
+      <div class="filter-group">
+        <label>Segmento</label>
+        <select id="fSegmento"><option value="">— Todos —</option></select>
+      </div>
+      <div class="filter-group">
+        <label>GP</label>
+        <select id="fGP"><option value="">— Todos —</option></select>
+      </div>
+    </div>
+    <div class="actions">
+      <button class="btn btn-dark" id="btnApply">Aplicar filtros</button>
+      <button class="btn btn-outline" id="btnClear">Limpar filtros</button>
+    </div>
+  </div>
+
+  <div class="charts-grid">
+    <div class="chart-box">
+      <h4>Lojas por faixa de atualização</h4>
+      <div id="chartFaixa"></div>
+    </div>
+    <div class="chart-box">
+      <h4>GPs com mais lojas críticas (&gt;90 dias ou nunca atualizou)</h4>
+      <div id="chartGP"></div>
+    </div>
+  </div>
+
+  <div class="panel" style="padding:0;overflow:hidden;">
+    <div style="padding:18px 20px 0;">
+      <h3>Lojas <span class="tag" id="rowCount">0</span></h3>
+    </div>
+    <div style="padding:0 20px 18px;">
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th data-k="Loja">Loja</th>
+              <th data-k="CNPJ">CNPJ</th>
+              <th data-k="Segmento">Segmento</th>
+              <th data-k="GP">GP</th>
+              <th data-k="Estoque">Estoque</th>
+              <th data-k="Faixa_Atualizacao">Atualização</th>
+              <th data-k="Status_Pgto">Pagamento</th>
+            </tr>
+          </thead>
+          <tbody id="tbody"></tbody>
+        </table>
+      </div>
+      <div class="pager">
+        <button id="pgPrev">← Anterior</button>
+        <span class="pageinfo" id="pgInfo"></span>
+        <button id="pgNext">Próxima →</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="chart-box" id="historyBox" style="margin-bottom:16px;"></div>
+
+  <div class="footer-note">
+    Painel estático gerado a partir da aba <b>Lojas_Super_Feirao_Set26</b>. Colunas de login, senha, telefone e e-mail
+    pessoal não são exibidas por segurança. Para atualizar, gere um novo <code>data.csv</code>/<code>historico.csv</code> e substitua os arquivos no repositório.
+  </div>
+
+</div>
+
+<script>
+const STATUS_COLOR = {
+  'Até 15 dias': 'green',
+  'Até 30 dias': 'gold',
+  '31 a 60 dias': 'amber',
+  '61 a 90 dias': 'amber',
+  'Acima de 90 dias': 'red',
+  'Nunca atualizou': 'gray',
+};
+const PGTO_COLOR = {
+  'PAGA': 'green',
+  'PENDENTE_ACEITE': 'gold',
+  'AGUARDANDO_PAGAMENTO': 'amber',
+  'EM PROCESSAMENTO': 'steel',
+};
+function pgtoBadgeClass(v){
+  if (!v) return 'b-gray';
+  if (v.includes('ATRASO')) return 'b-red';
+  return 'b-' + (PGTO_COLOR[v] || 'gray');
+}
+function faixaBadgeClass(v){ return 'b-' + (STATUS_COLOR[v] || 'gray'); }
+
+function parseCSV(text){
+  const rows = [];
+  let row = [], field = '', inQuotes = false;
+  for (let i=0;i<text.length;i++){
+    const c = text[i];
+    if (inQuotes){
+      if (c === '"'){
+        if (text[i+1] === '"'){ field += '"'; i++; } else { inQuotes = false; }
+      } else field += c;
+    } else {
+      if (c === '"') inQuotes = true;
+      else if (c === ',') { row.push(field); field=''; }
+      else if (c === '\n') { row.push(field); rows.push(row); row=[]; field=''; }
+      else if (c === '\r') { /* skip */ }
+      else field += c;
+    }
+  }
+  if (field.length || row.length) { row.push(field); rows.push(row); }
+  const header = rows.shift();
+  return rows.filter(r => r.length===header.length).map(r => {
+    const o = {};
+    header.forEach((h,i) => o[h] = r[i]);
+    return o;
+  });
+}
+
+let STORES = [];
+let HISTORY = [];
+let filtered = [];
+let page = 0;
+const PAGE_SIZE = 50;
+let sortKey = null, sortDir = 1;
+
+function uniqueSorted(arr){ return [...new Set(arr.filter(Boolean))].sort(); }
+
+function fillSelect(sel, values){
+  values.forEach(v => {
+    const opt = document.createElement('option');
+    opt.value = v; opt.textContent = v;
+    sel.appendChild(opt);
+  });
+}
+
+function renderKPIs(){
+  const total = STORES.length;
+  const semEstoque = STORES.filter(s => Number(s.Estoque) === 0).length;
+  const ate15 = STORES.filter(s => s.Faixa_Atualizacao === 'Até 15 dias').length;
+  const critico = STORES.filter(s => s.Faixa_Atualizacao === 'Acima de 90 dias' || s.Faixa_Atualizacao === 'Nunca atualizou').length;
+  const estoqueTotal = STORES.reduce((a,s) => a + (Number(s.Estoque)||0), 0);
+  const cobertura = total ? Math.round(1000*ate15/total)/10 : 0;
+
+  const cards = [
+    {cls:'c-total', num: total.toLocaleString('pt-BR'), lbl:'Lojas no feirão', sub:'Total na aba de estoque'},
+    {cls:'c-bom', num: ate15.toLocaleString('pt-BR'), lbl:'Atualizadas ≤15 dias', sub:'Estoque em dia'},
+    {cls:'c-critico', num: critico.toLocaleString('pt-BR'), lbl:'Críticas', sub:'>90 dias sem atualizar ou nunca'},
+    {cls:'c-sem', num: semEstoque.toLocaleString('pt-BR'), lbl:'Sem estoque', sub:'Estoque zerado'},
+    {cls:'c-estoque', num: estoqueTotal.toLocaleString('pt-BR'), lbl:'Estoque total', sub:'Unidades somadas'},
+    {cls:'c-cobertura', num: cobertura.toLocaleString('pt-BR') + '%', lbl:'Cobertura', sub:'% atualizado nos últimos 15 dias'},
+  ];
+  document.getElementById('kpiGrid').innerHTML = cards.map(c => `
+    <div class="kpi ${c.cls}">
+      <div class="num">${c.num}</div>
+      <div class="lbl">${c.lbl}</div>
+      <div class="sub">${c.sub}</div>
+    </div>`).join('');
+}
+
+function renderChartFaixa(){
+  const order = ['Até 15 dias','Até 30 dias','31 a 60 dias','61 a 90 dias','Acima de 90 dias','Nunca atualizou'];
+  const counts = order.map(k => STORES.filter(s => s.Faixa_Atualizacao === k).length);
+  const max = Math.max(...counts, 1);
+  const colorVar = {green:'var(--green)', gold:'var(--gold)', amber:'var(--amber)', red:'var(--red)', gray:'var(--gray)'};
+  const html = order.map((k,i) => {
+    const c = STATUS_COLOR[k] || 'gray';
+    const w = Math.round(100*counts[i]/max);
+    return `<div class="bar-row">
+      <div class="rlbl">${k}</div>
+      <div class="bar-track"><div class="bar-fill" style="width:${w}%;background:${colorVar[c]}"></div></div>
+      <div class="rval">${counts[i]}</div>
+    </div>`;
+  }).join('');
+  document.getElementById('chartFaixa').innerHTML = html;
+}
+
+function renderChartGP(){
+  const byGP = {};
+  STORES.forEach(s => {
+    if (s.Faixa_Atualizacao === 'Acima de 90 dias' || s.Faixa_Atualizacao === 'Nunca atualizou'){
+      const gp = (s.GP || 'Sem GP').split(' - ').pop();
+      byGP[gp] = (byGP[gp]||0) + 1;
+    }
+  });
+  const top = Object.entries(byGP).sort((a,b)=>b[1]-a[1]).slice(0,8);
+  const max = Math.max(...top.map(t=>t[1]), 1);
+  const html = top.map(([gp,n]) => `<div class="bar-row">
+      <div class="rlbl" title="${gp}">${gp}</div>
+      <div class="bar-track"><div class="bar-fill" style="width:${Math.round(100*n/max)}%;background:var(--red)"></div></div>
+      <div class="rval">${n}</div>
+    </div>`).join('') || '<div class="empty-state">Sem lojas críticas 🎉</div>';
+  document.getElementById('chartGP').innerHTML = html;
+}
+
+function renderHistory(){
+  const box = document.getElementById('historyBox');
+  if (HISTORY.length < 2){
+    box.innerHTML = `<h4>Evolução diária</h4><div class="empty-state">Ainda só há um dia de dados (${HISTORY[0]?.data||'hoje'}). Volte a atualizar o <code>historico.csv</code> nos próximos dias pra começar a ver a evolução do estoque no tempo.</div>`;
+    return;
+  }
+  const w = 100/HISTORY.length;
+  const maxTotal = Math.max(...HISTORY.map(h=>Number(h.total_lojas)||0),1);
+  const rows = HISTORY.map(h => {
+    const cob = Number(h.cobertura_pct)||0;
+    return `<div style="display:inline-block;width:${w}%;text-align:center;vertical-align:bottom;">
+      <div style="height:80px;display:flex;align-items:flex-end;justify-content:center;">
+        <div style="width:60%;background:var(--steel);border-radius:4px 4px 0 0;height:${Math.max(4,Math.round(80*cob/100))}px;" title="Cobertura ${cob}%"></div>
+      </div>
+      <div style="font-size:.68rem;color:var(--muted);margin-top:4px;">${h.data.slice(5)}</div>
+      <div style="font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:.72rem;">${cob}%</div>
+    </div>`;
+  }).join('');
+  box.innerHTML = `<h4>Cobertura de atualização (%) por dia</h4><div style="white-space:nowrap;">${rows}</div>`;
+}
+
+function applyFilters(){
+  const q = document.getElementById('fSearch').value.trim().toLowerCase();
+  const st = document.getElementById('fStatus').value;
+  const fa = document.getElementById('fFaixa').value;
+  const sg = document.getElementById('fSegmento').value;
+  const gp = document.getElementById('fGP').value;
+  filtered = STORES.filter(s => {
+    if (q && !((s.Loja||'').toLowerCase().includes(q) || (s.CNPJ||'').includes(q))) return false;
+    if (st && s.Status_Pgto !== st) return false;
+    if (fa && s.Faixa_Atualizacao !== fa) return false;
+    if (sg && s.Segmento !== sg) return false;
+    if (gp && s.GP !== gp) return false;
+    return true;
+  });
+  const activeCount = [q,st,fa,sg,gp].filter(Boolean).length;
+  document.getElementById('filterCount').textContent = activeCount + ' ativos';
+  page = 0;
+  renderTable();
+}
+
+function clearFilters(){
+  document.getElementById('fSearch').value = '';
+  document.getElementById('fStatus').value = '';
+  document.getElementById('fFaixa').value = '';
+  document.getElementById('fSegmento').value = '';
+  document.getElementById('fGP').value = '';
+  applyFilters();
+}
+
+function renderTable(){
+  if (sortKey){
+    filtered.sort((a,b) => {
+      let va = a[sortKey], vb = b[sortKey];
+      if (sortKey === 'Estoque'){ va = Number(va)||0; vb = Number(vb)||0; }
+      if (va < vb) return -1*sortDir;
+      if (va > vb) return 1*sortDir;
+      return 0;
+    });
+  }
+  document.getElementById('rowCount').textContent = filtered.length.toLocaleString('pt-BR');
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  page = Math.min(page, totalPages-1);
+  const slice = filtered.slice(page*PAGE_SIZE, page*PAGE_SIZE + PAGE_SIZE);
+  document.getElementById('tbody').innerHTML = slice.map(s => `
+    <tr>
+      <td>${s.Loja||''}</td>
+      <td style="font-family:'IBM Plex Mono',monospace;font-size:.72rem;">${s.CNPJ||''}</td>
+      <td>${s.Segmento||''}</td>
+      <td style="font-size:.74rem;">${(s.GP||'').split(' - ').pop()}</td>
+      <td style="font-family:'Space Grotesk',sans-serif;font-weight:600;">${s.Estoque||0}</td>
+      <td><span class="badge ${faixaBadgeClass(s.Faixa_Atualizacao)}">${s.Faixa_Atualizacao||'—'}</span></td>
+      <td><span class="badge ${pgtoBadgeClass(s.Status_Pgto)}">${s.Status_Pgto||'—'}</span></td>
+    </tr>`).join('') || '<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:30px;">Nenhuma loja encontrada com esses filtros.</td></tr>';
+  document.getElementById('pgInfo').textContent = `Página ${page+1} de ${totalPages}`;
+  document.getElementById('pgPrev').disabled = page === 0;
+  document.getElementById('pgNext').disabled = page >= totalPages-1;
+}
+
+document.querySelectorAll('th[data-k]').forEach(th => {
+  th.addEventListener('click', () => {
+    const k = th.dataset.k;
+    if (sortKey === k) sortDir *= -1; else { sortKey = k; sortDir = 1; }
+    renderTable();
+  });
+});
+document.getElementById('btnApply').addEventListener('click', applyFilters);
+document.getElementById('btnClear').addEventListener('click', clearFilters);
+document.getElementById('fSearch').addEventListener('keyup', e => { if (e.key === 'Enter') applyFilters(); });
+document.getElementById('pgPrev').addEventListener('click', () => { page--; renderTable(); });
+document.getElementById('pgNext').addEventListener('click', () => { page++; renderTable(); });
+
+async function init(){
+  try {
+    const [dataTxt, histTxt] = await Promise.all([
+      fetch('./data.csv').then(r => r.text()),
+      fetch('./historico.csv').then(r => r.ok ? r.text() : '').catch(()=>'')
+    ]);
+    STORES = parseCSV(dataTxt);
+    HISTORY = histTxt ? parseCSV(histTxt) : [];
+    filtered = STORES.slice();
+
+    fillSelect(document.getElementById('fStatus'), uniqueSorted(STORES.map(s=>s.Status_Pgto)));
+    fillSelect(document.getElementById('fFaixa'), ['Até 15 dias','Até 30 dias','31 a 60 dias','61 a 90 dias','Acima de 90 dias','Nunca atualizou']);
+    fillSelect(document.getElementById('fSegmento'), uniqueSorted(STORES.map(s=>s.Segmento)));
+    fillSelect(document.getElementById('fGP'), uniqueSorted(STORES.map(s=>s.GP)));
+
+    document.getElementById('lastUpdate').textContent = HISTORY.length ? HISTORY[HISTORY.length-1].data : new Date().toLocaleDateString('pt-BR');
+
+    renderKPIs();
+    renderChartFaixa();
+    renderChartGP();
+    renderHistory();
+    renderTable();
+  } catch (e){
+    document.querySelector('.wrap').innerHTML = `<div class="empty-state" style="margin-top:40px;">
+      <h2 style="font-family:'Space Grotesk',sans-serif;color:var(--ink);margin-bottom:8px;">Não foi possível carregar os dados</h2>
+      <p>Verifique se os arquivos <code>data.csv</code> e <code>historico.csv</code> estão na mesma pasta deste <code>index.html</code> no repositório.</p>
+    </div>`;
+    console.error(e);
+  }
+}
+init();
+</script>
+</body>
+</html>
