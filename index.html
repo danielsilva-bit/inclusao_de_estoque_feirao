@@ -57,6 +57,25 @@
   .mini.good .num{color:var(--lime);} .mini.bad .num{color:var(--gray);}
   .mini.info .num{color:var(--steel);}
 
+  .cmp-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;}
+  .cmp{border:1px solid var(--line);border-radius:12px;padding:12px 14px;}
+  .cmp-lbl{font-size:.76rem;color:var(--muted);margin-bottom:4px;}
+  .cmp-val{font-weight:700;font-size:1.3rem;font-variant-numeric:tabular-nums;}
+  .cmp-delta{font-size:.74rem;font-weight:600;margin-top:5px;display:flex;align-items:center;gap:4px;flex-wrap:wrap;}
+  .cmp-delta.good{color:var(--lime);}
+  .cmp-delta.bad{color:var(--red);}
+  .cmp-delta.flat{color:var(--muted);}
+
+  .funnel-row{display:grid;grid-template-columns:260px 1fr 210px;align-items:center;gap:12px;margin-bottom:10px;}
+  .funnel-row .funnel-lbl{font-size:.85rem;font-weight:600;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .funnel-row.lvl2 .funnel-lbl{padding-left:20px;font-weight:500;font-size:.82rem;}
+  .funnel-row.lvl3 .funnel-lbl{padding-left:42px;font-weight:500;font-size:.8rem;color:var(--muted);}
+  .funnel-track{background:var(--gray-bg);border-radius:7px;height:32px;overflow:hidden;}
+  .funnel-fill{height:100%;border-radius:7px;min-width:5px;}
+  .funnel-val{font-size:.82rem;text-align:right;color:var(--muted);font-variant-numeric:tabular-nums;}
+  .funnel-val b{font-size:.95rem;color:var(--ink);font-variant-numeric:tabular-nums;}
+  .funnel-note{font-size:.74rem;color:var(--muted);margin:-2px 0 14px 0;}
+
   .filter-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;}
   .filter-group{display:flex;flex-direction:column;gap:5px;}
   .filter-group label{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);}
@@ -123,6 +142,9 @@
     .charts-grid{grid-template-columns:1fr;}
     .filter-grid{grid-template-columns:1fr 1fr;}
     .actions{flex-direction:column;} .actions .btn{width:100%;text-align:center;}
+    .funnel-row{grid-template-columns:1fr;gap:4px;margin-bottom:14px;}
+    .funnel-val{text-align:left;}
+    .cmp-grid{grid-template-columns:repeat(2,1fr);}
   }
 </style>
 </head>
@@ -141,6 +163,16 @@
   </div>
 
   <div class="kpi-grid" id="kpiGrid"></div>
+
+  <div class="panel">
+    <h3>Funil de estoque &amp; atualização</h3>
+    <div id="funnelBox"></div>
+  </div>
+
+  <div class="panel" id="compareBox">
+    <h3>Comparativo com o dia anterior <span class="tag" id="compareTag">—</span></h3>
+    <div class="cmp-grid" id="compareGrid"></div>
+  </div>
 
   <div class="panel">
     <h3>Credenciais &amp; comunicação <span class="tag">colunas U–AC</span></h3>
@@ -421,6 +453,75 @@ function renderChartComercial(){
   document.getElementById('chartComercial').innerHTML = html;
 }
 
+function renderFunnel(){
+  const box = document.getElementById('funnelBox');
+  const total = STORES.length || 1;
+  const comEstoque = STORES.filter(s => (Number(s.Estoque)||0) > 0).length;
+  const semEstoque = total - comEstoque;
+  const comEstoqueAte15 = STORES.filter(s => (Number(s.Estoque)||0) > 0 && s.Faixa_Atualizacao === 'Até 15 dias').length;
+  const comEstoqueAcima15 = comEstoque - comEstoqueAte15;
+  const comEstoqueBase = comEstoque || 1;
+
+  const pctTotal = n => Math.round(1000*n/total)/10;
+  const pctOf = (n, base) => Math.round(1000*n/base)/10;
+
+  const rows = [
+    {lvl:1, lbl:'Lojas no feirão', val: total, pctTxt: '100% do feirão', color:'var(--steel)', widthPct: 100},
+    {lvl:2, lbl:'↳ Com estoque (Estoque > 0)', val: comEstoque, pctTxt: `${pctTotal(comEstoque)}% do total`, color:'var(--lime)', widthPct: pctTotal(comEstoque)},
+    {lvl:3, lbl:'↳ Atualizado ≤15 dias', val: comEstoqueAte15, pctTxt: `${pctOf(comEstoqueAte15, comEstoqueBase)}% do com estoque`, color:'var(--lime)', widthPct: pctTotal(comEstoqueAte15)},
+    {lvl:3, lbl:'↳ Acima de 15 dias / nunca atualizado', val: comEstoqueAcima15, pctTxt: `${pctOf(comEstoqueAcima15, comEstoqueBase)}% do com estoque`, color:'var(--gold)', widthPct: pctTotal(comEstoqueAcima15)},
+    {lvl:2, lbl:'↳ Sem estoque (Estoque = 0)', val: semEstoque, pctTxt: `${pctTotal(semEstoque)}% do total`, color:'var(--gray)', widthPct: pctTotal(semEstoque)},
+  ];
+
+  box.innerHTML = rows.map(r => `
+    <div class="funnel-row lvl${r.lvl}">
+      <div class="funnel-lbl" title="${r.lbl.replace(/^↳\s*/,'')}">${r.lbl}</div>
+      <div class="funnel-track"><div class="funnel-fill" style="width:${Math.max(r.widthPct,1)}%;background:${r.color}"></div></div>
+      <div class="funnel-val"><b>${r.val.toLocaleString('pt-BR')}</b> (${r.pctTxt})</div>
+    </div>`).join('') + `<div class="funnel-note">Barras na mesma escala (% do total de lojas no feirão), pra mostrar o tamanho real de cada etapa. Os textos entre parênteses trazem o percentual mais relevante pra cada linha: do total pra "Com estoque"/"Sem estoque", e do próprio grupo "Com estoque" pra suas duas divisões.</div>`;
+}
+
+const COMPARE_METRICS = [
+  {key:'total_lojas', label:'Lojas no feirão', dir:1},
+  {key:'sem_estoque', label:'Sem estoque', dir:-1},
+  {key:'ate_15_dias', label:'Atualizadas ≤15 dias', dir:1},
+  {key:'criticas_90_dias_ou_nunca', label:'Críticas (>90 dias/nunca)', dir:-1},
+  {key:'estoque_total', label:'Estoque total (unid.)', dir:1},
+  {key:'lojas_paga', label:'Status PAGA', dir:1},
+  {key:'cobertura_pct', label:'Cobertura (%)', dir:1, isPct:true},
+  {key:'com_credencial', label:'Com credencial', dir:1},
+  {key:'contato_wpp', label:'Contato WhatsApp', dir:1},
+  {key:'contato_email', label:'Contato e-mail', dir:1},
+];
+
+function renderCompare(){
+  const grid = document.getElementById('compareGrid');
+  const tag = document.getElementById('compareTag');
+  if (HISTORY.length < 2){
+    tag.textContent = 'sem dado anterior';
+    grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1;">Ainda só há um dia de dados no histórico (${HISTORY[0]?.data||'hoje'}). Depois que você atualizar o <code>historico.csv</code> de novo em outro dia, este bloco passa a comparar hoje com o dia anterior automaticamente.</div>`;
+    return;
+  }
+  const today = HISTORY[HISTORY.length-1];
+  const prev = HISTORY[HISTORY.length-2];
+  tag.textContent = `${prev.data} → ${today.data}`;
+  grid.innerHTML = COMPARE_METRICS.map(m => {
+    const curr = Number(today[m.key]) || 0;
+    const before = Number(prev[m.key]) || 0;
+    const diff = Math.round((curr - before) * 10) / 10;
+    let cls = 'flat', arrow = '→';
+    if (diff > 0){ arrow = '▲'; cls = m.dir >= 0 ? 'good' : 'bad'; }
+    else if (diff < 0){ arrow = '▼'; cls = m.dir >= 0 ? 'bad' : 'good'; }
+    const sign = diff > 0 ? '+' : '';
+    const unit = m.isPct ? ' p.p.' : '';
+    return `<div class="cmp">
+      <div class="cmp-lbl">${m.label}</div>
+      <div class="cmp-val">${curr.toLocaleString('pt-BR')}${m.isPct?'%':''}</div>
+      <div class="cmp-delta ${cls}">${arrow} ${sign}${diff.toLocaleString('pt-BR')}${unit} vs. ${prev.data.slice(5)}</div>
+    </div>`;
+  }).join('');
+}
+
 function renderHistory(){
   const box = document.getElementById('historyBox');
   if (HISTORY.length < 2){
@@ -549,6 +650,8 @@ async function init(){
     document.getElementById('lastUpdate').textContent = HISTORY.length ? HISTORY[HISTORY.length-1].data : new Date().toLocaleDateString('pt-BR');
 
     renderKPIs();
+    renderFunnel();
+    renderCompare();
     renderMiniStats();
     renderChartFaixa();
     renderChartComercial();
